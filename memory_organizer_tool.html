@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>記憶整理 · 對話拆解工具</title>
+<style>
+  :root {
+    --ink: #14171F; --surface: #1E2330; --surface-raised: #262C3D;
+    --amber: #C9974D; --amber-glow: #E8C87E; --amber-dim: #8A6B3A;
+    --text-primary: #EDE6D6; --text-secondary: #9CA3B0; --text-tertiary: #6B7280;
+    --teal: #6FA88E; --red: #C15B4E; --line: rgba(237, 230, 214, 0.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--ink); color: var(--text-primary);
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, sans-serif;
+    line-height: 1.7; min-height: 100vh; padding: 0 20px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 56px 0 100px; }
+  .hero { text-align: center; margin-bottom: 44px; }
+  .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: 0.2em; color: var(--amber-dim); text-transform: uppercase; margin-bottom: 16px; }
+  h1 { font-family: "Noto Serif TC", serif; font-size: clamp(26px, 5vw, 34px); font-weight: 700; margin-bottom: 12px; }
+  .hero-sub { color: var(--text-secondary); font-size: 14.5px; max-width: 500px; margin: 0 auto; }
+  .bead-mini {
+    width: 56px; height: 56px; margin: 0 auto 20px; border-radius: 50%;
+    background: url(https://cdn.jsdelivr.net/gh/Tabby1112/Memory-Amber@main/IMG_0170.png) center 54% / 82% auto no-repeat,
+                radial-gradient(circle at 32% 28%, rgba(255,255,255,0.35), transparent 40%),
+                radial-gradient(circle at 65% 70%, var(--amber-glow), var(--amber) 55%, var(--amber-dim) 100%);
+    box-shadow: 0 0 0 1px rgba(232,200,126,0.25), 0 10px 30px rgba(201,151,77,0.2);
+  }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  .card-title { font-size: 11px; letter-spacing: 0.1em; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 14px; }
+  .status-line { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.6; }
+  button { font-family: inherit; cursor: pointer; border: none; border-radius: 8px; font-size: 13.5px; font-weight: 700; padding: 11px 16px; }
+  .btn-primary { background: var(--amber); color: var(--ink); width: 100%; }
+  .btn-outline { background: transparent; border: 1px solid rgba(232,200,126,0.4); color: var(--amber-glow); width: 100%; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  select, textarea, input[type=text] {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+    background: var(--surface-raised); color: var(--text-primary); font-size: 13.5px;
+    font-family: inherit; box-sizing: border-box;
+  }
+  textarea { resize: vertical; line-height: 1.6; }
+  label { display: block; font-size: 12.5px; color: var(--text-secondary); margin-bottom: 6px; }
+  .row { display: flex; gap: 10px; margin-top: 12px; }
+  .row > * { flex: 1; }
+  .divider { height: 1px; background: var(--line); margin: 18px 0; }
+  .progress-list { max-height: 260px; overflow-y: auto; font-size: 13px; }
+  .progress-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
+  .tag-done { background: rgba(111,168,142,0.15); color: var(--teal); }
+  .tag-partial { background: rgba(232,200,126,0.15); color: var(--amber-glow); }
+  .tag-pending { background: rgba(155,163,176,0.15); color: var(--text-secondary); }
+  footer { text-align: center; font-size: 12px; color: var(--text-tertiary); margin-top: 40px; }
+  .path-hint { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--text-tertiary); background: var(--ink); border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; white-space: pre; overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="eyebrow">Memory Amber · 對話拆解工具</div>
+    <div class="bead-mini"></div>
+    <h1>把長篇對話，拆成一天一份</h1>
+    <p class="hero-sub">讀取官方匯出的完整聊天紀錄，依日期切成獨立資料夾，交給你選用的 AI 整理，存回同一個Memory Amber，供記憶封存控制台直接掃描比對。</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">第一步 · 記憶資料夾</div>
+    <div class="status-line" id="folder_status">尚未選擇資料夾。請選擇與備份工具相同的那個資料夾。</div>
+    <button class="btn-outline" id="folder_btn">選擇記憶資料夾</button>
+    <div class="path-hint" id="path_hint" style="display:none;">記憶資料夾/
+  {日期}_backup.txt          （備份工具產生的全部總覽）
+  Memory Amber/
+    2026-07-24/
+      2026-07-24原記憶體.txt   （備份工具產生）
+      2026-07-24對話紀錄.txt   （這個工具產生）
+      2026-07-24新記憶體.txt   （這個工具產生，AI整理結果）</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">第二步 · 聊天紀錄原始檔（自動比對與分割）</div>
+    <div class="status-line" id="chat_status">尚未選擇檔案。請選擇官方匯出的完整對話 txt。檔案可能很大，工具會邊讀邊寫，不會一次把整份檔案吃進記憶體。</div>
+    <div class="row">
+      <div><label>起始日期（較舊，選填）</label><input type="text" id="range_start" placeholder="例如 2024-09-07"></div>
+      <div><label>結束日期（較新，選填）</label><input type="text" id="range_end" placeholder="例如 2026-07-25"></div>
+    </div>
+    <div class="row">
+      <button class="btn-primary" id="chat_btn" disabled>選擇聊天紀錄檔案並開始分割</button>
+    </div>
+    <div class="status-line" id="split_status" style="margin-top:12px;">請先在第一步選擇記憶資料夾。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">第三步 · 逐日整理</div>
+    <label>選擇日期</label>
+    <select id="date_select" disabled></select>
+    <div class="row">
+      <button class="btn-outline" id="load_day_btn" disabled>載入這天的對話紀錄</button>
+      <button class="btn-outline" id="copy_btn" disabled>複製到剪貼簿</button>
+    </div>
+    <textarea id="export_area" rows="8" readonly placeholder="按「載入這天的對話紀錄」後，這裡會出現內容，複製後貼給你的 AI..."></textarea>
+    <div class="divider"></div>
+    <div class="card-title">自動呼叫 AI（選用，需要自己的 API 金鑰）</div>
+    <label>格式規則（固定，不可修改）</label>
+    <textarea id="instruction_fixed_area" rows="8" readonly style="opacity:0.6;cursor:not-allowed;">你現在的任務是一個純文字格式轉換工具,不是對話夥伴。請嚴格遵守以下規則:
+
+### 你會收到什麼
+我會貼給你一段文字,開頭會註明「請整理成N則,每則XXXX字以內」,後面接著當天完整的對話原文(格式為 [日期 時間] 說話者: 內容)。
+
+### 你要做的事
+把這一整天的對話,依照下方的風格範例,拆成指定的則數(N則),不要加入你自己的感想、評論、警語或提問。
+
+### 風格範例
+{{STYLE}}
+
+### 輸出格式(非常重要,只能長這樣)
+[1] 第一則摘要內容...
+
+[2] 第二則摘要內容...
+
+- 則數必須剛好等於我告知你的數字N
+- 每一則之間空一行
+- 只需要「[數字] 內容」這個格式,不要加日期標記(日期不用你處理)
+
+### 你絕對不能做的事
+- 不要有任何開場白、結語、說明(例如「好的,以下是整理結果」這類句子完全不要出現)
+- 不要對內容發表看法或提問,只負責重新敘述、濃縮
+
+現在請等我貼上內容,收到後直接輸出,不需要先跟我確認。</textarea>
+    <label style="margin-top:12px;">摘要風格（可自訂，會自動接入上方規則的 {{STYLE}} 位置）</label>
+    <textarea id="instruction_style_area" rows="6" placeholder="描述你想要的摘要風格，例如語氣、要不要保留露骨描寫、要不要標註時間地點等..."></textarea>
+    <div class="row">
+      <div>
+        <label>AI 服務</label>
+        <select id="provider_select">
+          <option value="anthropic">Anthropic（Claude）</option>
+          <option value="openai">OpenAI（GPT）</option>
+          <option value="gemini">Google（Gemini）</option>
+        </select>
+      </div>
+      <div><label>API 金鑰</label><input type="password" id="api_key_input" placeholder="貼上你自己的 API 金鑰"></div>
+    </div>
+    <label style="margin-top:12px;">模型名稱（選填，留空用預設值）</label>
+    <input type="text" id="model_input" placeholder="例如 claude-sonnet-5 / gpt-5.6 / gemini-3.6-flash">
+    <div class="status-line" style="margin-top:8px;margin-bottom:0;font-size:12px;">
+      <label style="display:inline-flex;align-items:center;gap:6px;margin:0;"><input type="checkbox" id="remember_key" style="width:auto;">在這個瀏覽器記住金鑰與指令（只存在你自己電腦，不會上傳）</label>
+    </div>
+    <div class="row">
+      <button class="btn-outline" id="call_ai_btn" disabled>呼叫 AI 整理這一天</button>
+    </div>
+    <div class="divider"></div>
+    <label>AI 整理結果（自動呼叫會填在這裡，也可以手動貼上）</label>
+    <textarea id="ai_result_area" rows="8" placeholder="把 AI 回覆的內容整段貼在這裡，或按上方「呼叫 AI」自動填入..."></textarea>
+    <div class="row">
+      <button class="btn-primary" id="save_day_btn">驗證並存為這天的新記憶體</button>
+    </div>
+    <div class="status-line" id="day_status" style="margin-top:12px;">尚未載入日期。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">進度總覽</div>
+    <div class="status-line" id="progress_summary">請先完成上方步驟以載入進度。</div>
+    <div class="row"><button class="btn-outline" id="refresh_btn">重新整理進度</button></div>
+    <div class="divider"></div>
+    <div class="card-title">批次自動整理（依上方選擇的 AI 服務與金鑰）</div>
+    <div class="status-line" style="margin-bottom:10px;">會依序處理所有「已有對話紀錄、尚無新記憶體」的日期。建議先在上方測試單一天沒問題後再使用。</div>
+    <div class="row">
+      <button class="btn-primary" id="batch_ai_btn">批次呼叫 AI 整理所有待整理日期</button>
+      <button class="btn-outline" id="stop_batch_ai_btn" disabled>停止</button>
+    </div>
+    <div class="status-line" id="batch_ai_status" style="margin-top:12px;">尚未開始。</div>
+    <div class="progress-list" id="progress_list" style="margin-top:12px;"></div>
+  </div>
+
+  <footer>「Memory Amber」是工具的專屬資料夾，請不要手動更名，兩個工具都是靠這個固定名稱互相溝通的。</footer>
+</div>
+
+<script>
+(function(){
+  var DAILY_FOLDER_NAME = 'Memory Amber';
+  var dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  var msgRe = /^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\]\s*([^:]+):\s?(.*)$/;
+
+  var dirHandle = null;
+
+  var folderBtn = document.getElementById('folder_btn');
+  var folderStatus = document.getElementById('folder_status');
+  var pathHint = document.getElementById('path_hint');
+  var chatBtn = document.getElementById('chat_btn');
+  var chatStatus = document.getElementById('chat_status');
+  var splitStatus = document.getElementById('split_status');
+  var rangeStart = document.getElementById('range_start');
+  var rangeEnd = document.getElementById('range_end');
+  var dateSelect = document.getElementById('date_select');
+  var loadDayBtn = document.getElementById('load_day_btn');
+  var copyBtn = document.getElementById('copy_btn');
+  var exportArea = document.getElementById('export_area');
+  var aiResultArea = document.getElementById('ai_result_area');
+  var saveDayBtn = document.getElementById('save_day_btn');
+  var dayStatus = document.getElementById('day_status');
+  var progressSummary = document.getElementById('progress_summary');
+  var progressList = document.getElementById('progress_list');
+  var refreshBtn = document.getElementById('refresh_btn');
+  var providerSelect = document.getElementById('provider_select');
+  var apiKeyInput = document.getElementById('api_key_input');
+  var modelInput = document.getElementById('model_input');
+  var instructionFixedArea = document.getElementById('instruction_fixed_area');
+  var instructionStyleArea = document.getElementById('instruction_style_area');
+  var rememberKey = document.getElementById('remember_key');
+  var callAiBtn = document.getElementById('call_ai_btn');
+  var batchAiBtn = document.getElementById('batch_ai_btn');
+  var stopBatchAiBtn = document.getElementById('stop_batch_ai_btn');
+  var batchAiStatus = document.getElementById('batch_ai_status');
+
+  function idbOpen(){
+    return new Promise(function(resolve,reject){
+      var req = indexedDB.open('memAmberDB',1);
+      req.onupgradeneeded = function(){ req.result.createObjectStore('handles'); };
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ reject(req.error); };
+    });
+  }
+  async function idbGetHandle(){
+    try{
+      var db = await idbOpen();
+      return await new Promise(function(resolve,reject){
+        var tx = db.transaction('handles','readonly');
+        var req = tx.objectStore('handles').get('folder');
+        req.onsuccess = function(){ resolve(req.result||null); };
+        req.onerror = function(){ reject(req.error); };
+      });
+    }catch(e){ return null; }
+  }
+  async function idbSetHandle(handle){
+    try{
+      var db = await idbOpen();
+      return await new Promise(function(resolve,reject){
+        var tx = db.transaction('handles','readwrite');
+        tx.objectStore('handles').put(handle,'folder');
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    }catch(e){}
+  }
+
+  // 只讀檔案前面一小段，找出第一則對話的日期，不需要把整份檔案讀進來。
+  async function peekFirstDate(file){
+    var reader = file.stream().getReader();
+    var decoder = new TextDecoder('utf-8');
+    var buffer = '';
+    var firstDateRe = /^\[(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}:\d{2}\]/m;
+    var found = null;
+    try{
+      while(true){
+        var res = await reader.read();
+        if(res.done) break;
+        buffer += decoder.decode(res.value, {stream:true});
+        var m = buffer.match(firstDateRe);
+        if(m){ found = m[1]; break; }
+        if(buffer.length > 5*1024*1024) break; // 安全上限，避免開頭沒有正常格式時整份都讀進來
+      }
+    } finally {
+      try{ await reader.cancel(); }catch(e){}
+    }
+    return found;
+  }
+
+  // 在已排序的日期陣列中，找出「大於等於 fromDate」的最小日期（往後找最近的資料夾）。
+  function nextAvailableDate(sortedDates, fromDate){
+    var lo=0, hi=sortedDates.length-1, ans=null;
+    while(lo<=hi){
+      var mid=(lo+hi)>>1;
+      if(sortedDates[mid] >= fromDate){ ans = sortedDates[mid]; hi = mid-1; }
+      else lo = mid+1;
+    }
+    return ans;
+  }
+
+  // 邊讀邊寫：一次只在記憶體裡保留「目前這一組」的對話，寫完就丟掉，
+  // 不會把整份 37MB 的檔案一次全部塞進記憶體。
+  async function streamSplitAndWrite(file, availableDates, opts, onStatus){
+    var totalBytes = file.size;
+    var processedBytes = 0;
+    var reader = file.stream().getReader();
+    var decoder = new TextDecoder('utf-8');
+    var buffer = '';
+    var currentMsg = null;
+    var group = [];
+    var groupSourceDates = [];
+    var currentTarget = null;
+    var writtenCount = 0;
+    var skippedOverwrite = [];
+    var orphanNote = null;
+    var stoppedEarly = false;
+    var startFilter = opts.start || null;
+    var endFilter = opts.end || null;
+
+    function messageText(m){ return '['+m.date+' '+m.time+'] '+m.speaker+': '+m.lines.join('\n'); }
+
+    async function flushGroup(){
+      if(!group.length || !currentTarget){ group=[]; groupSourceDates=[]; return; }
+      var text = group.map(messageText).join('\n');
+      var day = await getDayFolder(currentTarget, true);
+      var filename = currentTarget + '對話紀錄.txt';
+      var existing = await readFileIn(day, filename);
+      if(existing !== null){
+        var uniqueDates = groupSourceDates.filter(function(d,i){ return groupSourceDates.indexOf(d)===i; });
+        var ok = confirm(currentTarget + ' 已存在舊的對話紀錄，是否覆蓋？\n（本次來源日期：' + uniqueDates.join('、') + '）');
+        if(!ok){ skippedOverwrite.push(currentTarget); group=[]; groupSourceDates=[]; return; }
+      }
+      await writeFileIn(day, filename, text);
+      writtenCount++;
+      group = []; groupSourceDates = [];
+    }
+
+    async function handleMessage(m){
+      if(startFilter && m.date < startFilter) return;
+      if(endFilter && m.date > endFilter){ stoppedEarly = true; return; }
+      if(currentTarget === null){
+        currentTarget = nextAvailableDate(availableDates, m.date);
+        if(currentTarget === null){ orphanNote = m.date; stoppedEarly = true; return; }
+      } else if(m.date > currentTarget){
+        await flushGroup();
+        currentTarget = nextAvailableDate(availableDates, m.date);
+        if(currentTarget === null){ orphanNote = m.date; stoppedEarly = true; return; }
+      }
+      group.push(m);
+      groupSourceDates.push(m.date);
+    }
+
+    function consumeLine(line){
+      var m = line.match(msgRe);
+      if(m){
+        var date=m[1], time=m[2], speaker=m[3], firstLine=m[4];
+        currentMsg = {date:date, time:time, speaker:speaker, lines:[firstLine]};
+        return currentMsg;
+      } else if(currentMsg){
+        currentMsg.lines.push(line);
+      }
+      return null;
+    }
+
+    while(true){
+      if(stoppedEarly) break;
+      var res = await reader.read();
+      if(res.done) break;
+      processedBytes += res.value.length;
+      buffer += decoder.decode(res.value, {stream:true});
+      var lines = buffer.split(/\r?\n/);
+      buffer = lines.pop();
+      for(var i=0;i<lines.length;i++){
+        var newMsg = consumeLine(lines[i]);
+        if(newMsg){ await handleMessage(newMsg); if(stoppedEarly) break; }
+      }
+      if(onStatus) onStatus(processedBytes, totalBytes, writtenCount, currentTarget);
+      await new Promise(function(r){ setTimeout(r, 0); });
+    }
+    if(!stoppedEarly && buffer){
+      var lastMsg = consumeLine(buffer);
+      if(lastMsg) await handleMessage(lastMsg);
+    }
+    try{ await reader.cancel(); }catch(e){}
+    await flushGroup();
+
+    return { writtenCount: writtenCount, skippedOverwrite: skippedOverwrite, orphanNote: orphanNote };
+  }
+  function countEntriesInDayTxt(text){
+    if(!text) return 0;
+    var matches = text.match(/^\[\d+\]/gm);
+    return matches ? matches.length : 0;
+  }
+  var CHUNK_CHAR_THRESHOLD = 60000;
+  var msgStartRe = /^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]/;
+  function splitTextIntoChunks(text, maxChars){
+    var lines = (text||'').split('\n');
+    var chunks = []; var current = []; var currentLen = 0;
+    lines.forEach(function(line){
+      var lineLen = line.length + 1;
+      var isNewMsg = msgStartRe.test(line);
+      if(isNewMsg && current.length && currentLen + lineLen > maxChars){
+        chunks.push(current.join('\n'));
+        current = []; currentLen = 0;
+      }
+      current.push(line); currentLen += lineLen;
+    });
+    if(current.length) chunks.push(current.join('\n'));
+    return chunks.length ? chunks : [text||''];
+  }
+  function distributeCounts(chunkTexts, totalCount){
+    var lens = chunkTexts.map(function(t){ return t.length; });
+    var totalLen = lens.reduce(function(a,b){return a+b;},0) || 1;
+    var counts = lens.map(function(l){ return Math.max(1, Math.round(totalCount * l / totalLen)); });
+    var sum = counts.reduce(function(a,b){return a+b;},0);
+    var diff = totalCount - sum;
+    var idx = counts.indexOf(Math.max.apply(null, counts));
+    counts[idx] += diff;
+    if(counts[idx] < 1) counts[idx] = 1;
+    return counts;
+  }
+  function parseSimpleEntries(text){
+    var lines = (text||'').split(/\r?\n/);
+    var entries = []; var buffer = []; var started = false;
+    var idxRe = /^\[(\d+)\]\s?(.*)$/;
+    function flush(){ if(started){ var joined = buffer.join('\n').trim(); if(joined) entries.push(joined); } buffer=[]; }
+    lines.forEach(function(line){
+      var m = line.match(idxRe);
+      if(m){ flush(); started=true; buffer.push(m[2]); return; }
+      if(started){ buffer.push(line.trim()===''?'':line); }
+    });
+    flush();
+    return entries;
+  }
+  async function callAiForDay(date, totalCount, rawFullText, onProgress){
+    if(rawFullText.length <= CHUNK_CHAR_THRESHOLD){
+      var prompt = '【本次範圍：' + date + '，請整理成 ' + totalCount + ' 則，每則500字以內】\n\n' + rawFullText;
+      return await callAiProvider(prompt);
+    }
+    var chunkTexts = splitTextIntoChunks(rawFullText, CHUNK_CHAR_THRESHOLD);
+    var counts = distributeCounts(chunkTexts, totalCount);
+    var allEntries = [];
+    for(var i=0;i<chunkTexts.length;i++){
+      if(onProgress) onProgress('內容較長，自動分段處理中（'+(i+1)+'/'+chunkTexts.length+'）...');
+      var chunkPrompt = '【本次範圍：'+date+'（因內容過長，這是第 '+(i+1)+'/'+chunkTexts.length+' 段），請整理成 '+counts[i]+' 則，每則500字以內】\n\n'+chunkTexts[i];
+      var chunkResult = await callAiProvider(chunkPrompt);
+      allEntries = allEntries.concat(parseSimpleEntries(chunkResult));
+    }
+    var lines = [];
+    allEntries.forEach(function(content, idx){ lines.push('['+(idx+1)+'] '+content); lines.push(''); });
+    return lines.join('\n').trim();
+  }
+
+  async function getDailyRoot(create){ return await dirHandle.getDirectoryHandle(DAILY_FOLDER_NAME, {create: !!create}); }
+  async function getDayFolder(date, create){
+    var root = await getDailyRoot(!!create);
+    return await root.getDirectoryHandle(date, {create: !!create});
+  }
+  async function writeFileIn(handle, filename, contents){
+    var fh = await handle.getFileHandle(filename, {create:true});
+    var w = await fh.createWritable();
+    await w.write(contents);
+    await w.close();
+  }
+  async function readFileIn(handle, filename){
+    try{ var fh = await handle.getFileHandle(filename); var file = await fh.getFile(); return await file.text(); }
+    catch(e){ return null; }
+  }
+  async function listAvailableDates(){
+    var dates = [];
+    try{
+      var root = await getDailyRoot(false);
+      for await (var entry of root.values()){ if(entry.kind==='directory' && dateRegex.test(entry.name)) dates.push(entry.name); }
+    }catch(e){}
+    return dates.sort();
+  }
+  async function dayFolderStatus(date){
+    try{
+      var day = await getDayFolder(date, false);
+      var hasOriginal=false, hasChat=false, hasNew=false;
+      for await (var entry of day.values()){
+        if(entry.name === date+'原記憶體.txt') hasOriginal=true;
+        if(entry.name === date+'對話紀錄.txt') hasChat=true;
+        if(entry.name === date+'新記憶體.txt') hasNew=true;
+      }
+      return {hasOriginal:hasOriginal, hasChat:hasChat, hasNew:hasNew};
+    }catch(e){ return {hasOriginal:false, hasChat:false, hasNew:false}; }
+  }
+
+  folderBtn.addEventListener('click', async function(){
+    try{
+      var handle = await window.showDirectoryPicker({mode:'readwrite'});
+      dirHandle = handle;
+      await idbSetHandle(handle);
+      folderStatus.textContent = '已選擇資料夾：' + handle.name;
+      pathHint.style.display = 'block';
+      chatBtn.disabled = false;
+      splitStatus.textContent = '已就緒，請選擇聊天紀錄檔案。';
+      await renderProgress();
+    }catch(e){
+      if(e && e.name !== 'AbortError'){ folderStatus.textContent = '選擇資料夾失敗：' + e.message; }
+    }
+  });
+
+  chatBtn.addEventListener('click', async function(){
+    if(chatBtn.disabled) return;
+    chatBtn.disabled = true;
+    try{
+      if(!dirHandle){
+        var saved = await idbGetHandle();
+        if(!saved){ splitStatus.textContent = '請先在第一步選擇記憶資料夾。'; return; }
+        try{
+          splitStatus.textContent = '正在重新確認資料夾授權，請留意畫面上或工作列跳出的授權提示...';
+          var perm = await saved.requestPermission({mode:'readwrite'});
+          if(perm !== 'granted'){
+            splitStatus.textContent = '尚未取得資料夾授權（可能被拒絕，或瀏覽器沒有跳出授權提示）。請重新按第一步的「選擇記憶資料夾」再試一次。';
+            return;
+          }
+          dirHandle = saved;
+          folderStatus.textContent = '已選擇資料夾：' + saved.name;
+          pathHint.style.display = 'block';
+        }catch(e){
+          splitStatus.textContent = '重新取得資料夾授權失敗：' + e.message + '，請重新按第一步的「選擇記憶資料夾」。';
+          return;
+        }
+      }
+
+      var handles = await window.showOpenFilePicker({types:[{description:'Chat log',accept:{'text/plain':['.txt']}}]});
+      var fh = handles[0];
+      var file = await fh.getFile();
+      var sizeMB = (file.size/1024/1024).toFixed(1);
+
+      var proceed = confirm('已選擇對話紀錄檔案：' + file.name + '（' + sizeMB + ' MB），是否開始比對與分割？');
+      if(!proceed){ chatStatus.textContent = '已取消選擇。'; return; }
+
+      chatStatus.textContent = '已選擇「' + file.name + '」（' + sizeMB + ' MB）。';
+      splitStatus.textContent = '正在尋找對話紀錄開頭的第一個日期...';
+
+      var firstDate = await peekFirstDate(file);
+      if(!firstDate){
+        splitStatus.textContent = '在檔案開頭找不到符合格式的對話日期（[YYYY-MM-DD HH:MM:SS] 說話者: 內容），請確認這是官方匯出的完整對話紀錄。';
+        return;
+      }
+
+      splitStatus.textContent = '找到起始日期：' + firstDate + '，正在讀取 Memory Amber 內已有的日期資料夾...';
+      var availableDates = await listAvailableDates();
+      if(availableDates.length===0){
+        splitStatus.textContent = 'Memory Amber 資料夾裡目前沒有任何日期資料夾（需要先用備份工具建立），無法比對，已取消。';
+        return;
+      }
+
+      var opts = { start: rangeStart.value.trim() || null, end: rangeEnd.value.trim() || null };
+      splitStatus.textContent = '開始逐段讀取與寫入... 0%';
+
+      var result = await streamSplitAndWrite(file, availableDates, opts, function(doneBytes, totalBytes, writtenCount, target){
+        var pct = totalBytes ? Math.round(doneBytes/totalBytes*100) : 0;
+        splitStatus.textContent = '讀取中... ' + pct + '%（已寫入 ' + writtenCount + ' 個日期'
+          + (target ? ('，目前處理到 ' + target) : '') + '）';
+      });
+
+      var msg = '完成！本次共寫入 ' + result.writtenCount + ' 個日期的對話紀錄。';
+      if(result.skippedOverwrite.length) msg += '　你選擇不覆蓋，已略過：' + result.skippedOverwrite.join('、');
+      if(result.orphanNote) msg += '　從 ' + result.orphanNote + ' 之後找不到更晚的記憶資料夾可比對，已略過其後的內容（記得先用備份工具建立對應資料夾）。';
+      splitStatus.textContent = msg;
+
+      await renderProgress();
+    }catch(e){
+      if(e && e.name === 'AbortError'){
+        splitStatus.textContent = '已取消檔案選擇（沒有選到檔案）。如果你只按過一次「選擇聊天紀錄檔案並開始分割」，這通常代表選檔視窗本身被關掉了，例如檔案存在 OneDrive 等雲端同步資料夾且尚未下載到本機，或選檔視窗被切到背景。';
+      } else {
+        splitStatus.textContent = '處理失敗（' + (e && e.name) + '）：' + (e && e.message);
+        try{ console.error('memory_organizer split error', e); }catch(err){}
+      }
+    } finally {
+      chatBtn.disabled = false;
+    }
+  });
+
+  function populateDateSelect(dates){
+    dateSelect.innerHTML = dates.map(function(d){ return '<option value="'+d+'">'+d+'</option>'; }).join('');
+    dateSelect.disabled = dates.length===0;
+    loadDayBtn.disabled = dates.length===0;
+  }
+
+  var currentDayRaw = null;
+  var currentDayCount = 1;
+  loadDayBtn.addEventListener('click', async function(){
+    var date = dateSelect.value;
+    if(!date) return;
+    try{
+      var day = await getDayFolder(date, false);
+      var raw = await readFileIn(day, date+'對話紀錄.txt');
+      if(raw===null){ dayStatus.textContent = '這天還沒有對話紀錄，請先在第二步選擇聊天紀錄檔案並分割。'; exportArea.value=''; copyBtn.disabled=true; callAiBtn.disabled=true; return; }
+      var originalTxt = await readFileIn(day, date+'原記憶體.txt');
+      var count = countEntriesInDayTxt(originalTxt) || 1;
+      currentDayRaw = raw;
+      currentDayCount = count;
+      exportArea.value = '【本次範圍：' + date + '，請整理成 ' + count + ' 則，每則500字以內】\n\n' + raw;
+      copyBtn.disabled = false;
+      callAiBtn.disabled = false;
+      var estTokens = Math.round(raw.length * 1.8);
+      var chunkNote = raw.length > CHUNK_CHAR_THRESHOLD ? '　⚠ 內容較長，呼叫 AI 時會自動分段處理' : '';
+      dayStatus.textContent = '已載入 ' + date + ' 的對話紀錄（原有 ' + count + ' 則記憶），共 ' + raw.length + ' 字，約 ' + estTokens + ' token' + chunkNote + '。';
+    }catch(e){
+      dayStatus.textContent = '讀取失敗：' + e.message;
+    }
+  });
+
+  copyBtn.addEventListener('click', async function(){
+    try{ await navigator.clipboard.writeText(exportArea.value); dayStatus.textContent = '已複製到剪貼簿，可以貼給 AI 了。'; }
+    catch(e){ exportArea.select(); dayStatus.textContent = '自動複製失敗，已選取文字，請手動複製（Ctrl/Cmd+C）。'; }
+  });
+
+  saveDayBtn.addEventListener('click', async function(){
+    var date = dateSelect.value;
+    if(!date){ dayStatus.textContent = '請先選擇日期。'; return; }
+    var text = aiResultArea.value.trim();
+    if(!text){ dayStatus.textContent = '請先貼上 AI 回覆的內容。'; return; }
+    if(text.indexOf('[1]')===-1){
+      dayStatus.textContent = '格式看起來不太對，請確認 AI 有照 [數字] 的格式輸出。';
+      return;
+    }
+    try{
+      var day = await getDayFolder(date, true);
+      await writeFileIn(day, date+'新記憶體.txt', text);
+      dayStatus.textContent = '已存為 ' + date + ' 的新記憶體。回到記憶封存控制台即可掃描比對。';
+      aiResultArea.value = '';
+      await renderProgress();
+    }catch(e){
+      dayStatus.textContent = '儲存失敗：' + e.message;
+    }
+  });
+
+  refreshBtn.addEventListener('click', renderProgress);
+
+  async function renderProgress(){
+    if(!dirHandle){ progressSummary.textContent = '請先完成上方步驟以載入進度。'; progressList.innerHTML=''; return; }
+    var dates = await listAvailableDates();
+    populateDateSelect(dates);
+    var doneCount=0, partialCount=0;
+    var html = '';
+    for(var i=dates.length-1;i>=0;i--){
+      var d = dates[i];
+      var st = await dayFolderStatus(d);
+      var tag, label;
+      if(st.hasNew){ tag='tag-done'; label='已完成'; doneCount++; }
+      else if(st.hasChat){ tag='tag-partial'; label='待整理'; partialCount++; }
+      else { tag='tag-pending'; label='未產生對話紀錄'; }
+      html += '<div class="progress-item"><span>'+d+'</span><span class="tag '+tag+'">'+label+'</span></div>';
+    }
+    progressSummary.textContent = '共 '+dates.length+' 天　已完成 '+doneCount+' 天　待整理 '+partialCount+' 天　尚未產生對話紀錄 '+(dates.length-doneCount-partialCount)+' 天';
+    progressList.innerHTML = html;
+  }
+
+  // ---- API key persistence (plain local page, not a Claude artifact, localStorage is fine here) ----
+  (function initKeyStorage(){
+    try{
+      var savedProvider = localStorage.getItem('memAmber_provider');
+      var savedKey = localStorage.getItem('memAmber_apiKey');
+      var savedModel = localStorage.getItem('memAmber_model');
+      var savedStyle = localStorage.getItem('memAmber_style');
+      if(savedProvider){ providerSelect.value = savedProvider; }
+      if(savedKey){ apiKeyInput.value = savedKey; rememberKey.checked = true; }
+      if(savedModel){ modelInput.value = savedModel; }
+      if(savedStyle){ instructionStyleArea.value = savedStyle; }
+    }catch(e){}
+  })();
+  function persistKeyIfNeeded(){
+    try{
+      if(rememberKey.checked){
+        localStorage.setItem('memAmber_provider', providerSelect.value);
+        localStorage.setItem('memAmber_apiKey', apiKeyInput.value);
+        localStorage.setItem('memAmber_model', modelInput.value);
+        localStorage.setItem('memAmber_style', instructionStyleArea.value);
+      } else {
+        localStorage.removeItem('memAmber_provider');
+        localStorage.removeItem('memAmber_apiKey');
+        localStorage.removeItem('memAmber_model');
+        localStorage.removeItem('memAmber_style');
+      }
+    }catch(e){}
+  }
+  apiKeyInput.addEventListener('change', persistKeyIfNeeded);
+  rememberKey.addEventListener('change', persistKeyIfNeeded);
+  providerSelect.addEventListener('change', persistKeyIfNeeded);
+  modelInput.addEventListener('change', persistKeyIfNeeded);
+  instructionStyleArea.addEventListener('change', persistKeyIfNeeded);
+  function buildInstruction(){
+    var style = instructionStyleArea.value.trim() || '(未指定風格，請以中性客觀的第三人稱敘事摘要呈現)';
+    return instructionFixedArea.value.replace('{{STYLE}}', style);
+  }
+
+  async function callOpenAI(apiKey, model, prompt){
+    var resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ model: model || 'gpt-5.6', messages: [{ role: 'user', content: prompt }] })
+    });
+    if(!resp.ok){ throw new Error('OpenAI 錯誤 ' + resp.status + '：' + (await resp.text()).slice(0,300)); }
+    var data = await resp.json();
+    return data.choices[0].message.content;
+  }
+  async function callAnthropic(apiKey, model, prompt){
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: model || 'claude-sonnet-5', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
+    });
+    if(!resp.ok){ throw new Error('Anthropic 錯誤 ' + resp.status + '：' + (await resp.text()).slice(0,300)); }
+    var data = await resp.json();
+    return (data.content||[]).map(function(b){ return b.text||''; }).join('');
+  }
+  async function callGemini(apiKey, model, prompt){
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model || 'gemini-3.6-flash') + ':generateContent?key=' + encodeURIComponent(apiKey);
+    var resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+    if(!resp.ok){ throw new Error('Gemini 錯誤 ' + resp.status + '：' + (await resp.text()).slice(0,300)); }
+    var data = await resp.json();
+    return data.candidates[0].content.parts.map(function(p){ return p.text||''; }).join('');
+  }
+  async function callAiProvider(dayText){
+    var provider = providerSelect.value;
+    var apiKey = apiKeyInput.value.trim();
+    var model = modelInput.value.trim();
+    var instruction = buildInstruction();
+    if(!apiKey){ throw new Error('請先輸入 API 金鑰'); }
+    var prompt = instruction + '\n\n' + dayText;
+    if(provider==='openai') return await callOpenAI(apiKey, model, prompt);
+    if(provider==='anthropic') return await callAnthropic(apiKey, model, prompt);
+    if(provider==='gemini') return await callGemini(apiKey, model, prompt);
+    throw new Error('未知的 AI 服務');
+  }
+
+  callAiBtn.addEventListener('click', async function(){
+    var date = dateSelect.value;
+    if(!currentDayRaw || !date){ dayStatus.textContent = '請先載入這天的對話紀錄。'; return; }
+    callAiBtn.disabled = true;
+    dayStatus.textContent = '呼叫 AI 中，請稍候...';
+    try{
+      var result = await callAiForDay(date, currentDayCount, currentDayRaw, function(msg){ dayStatus.textContent = msg; });
+      aiResultArea.value = result;
+      dayStatus.textContent = 'AI 已回覆，請檢查內容無誤後，按下方「驗證並存為新記憶體」。';
+    }catch(e){
+      dayStatus.textContent = '呼叫 AI 失敗：' + e.message;
+    }
+    callAiBtn.disabled = false;
+  });
+
+  var batchAiStopFlag = false;
+  batchAiBtn.addEventListener('click', async function(){
+    if(!dirHandle){ batchAiStatus.textContent = '請先選擇資料夾。'; return; }
+    var apiKey = apiKeyInput.value.trim();
+    if(!apiKey){ batchAiStatus.textContent = '請先輸入 API 金鑰。'; return; }
+    var dates = await listAvailableDates();
+    var pending = [];
+    for(var i=0;i<dates.length;i++){
+      var st = await dayFolderStatus(dates[i]);
+      if(st.hasChat && !st.hasNew) pending.push(dates[i]);
+    }
+    if(pending.length===0){ batchAiStatus.textContent = '目前沒有「待整理」的日期（要先在上方批次產生每日對話紀錄）。'; return; }
+    if(!confirm('即將呼叫 AI 依序整理 ' + pending.length + ' 天，這會使用你的 API 額度。是否繼續？')) return;
+    batchAiStopFlag = false;
+    batchAiBtn.disabled = true;
+    stopBatchAiBtn.disabled = false;
+    var done=0, failList=[];
+    for(var j=0;j<pending.length;j++){
+      if(batchAiStopFlag){ batchAiStatus.textContent = '已手動停止。完成 ' + done + ' / ' + pending.length + ' 天。'; break; }
+      var date = pending[j];
+      batchAiStatus.textContent = '（' + (j+1) + '/' + pending.length + '）處理 ' + date + '，呼叫 AI 中...';
+      try{
+        var day = await getDayFolder(date, false);
+        var raw = await readFileIn(day, date+'對話紀錄.txt');
+        var originalTxt = await readFileIn(day, date+'原記憶體.txt');
+        var count = countEntriesInDayTxt(originalTxt) || 1;
+        var result = await callAiForDay(date, count, raw, function(msg){ batchAiStatus.textContent = '（' + (j+1) + '/' + pending.length + '）' + date + '：' + msg; });
+        if(result.indexOf('[1]')===-1){
+          failList.push(date + '：AI 回覆格式不符，已略過（請手動檢查）');
+        } else {
+          await writeFileIn(day, date+'新記憶體.txt', result);
+          done++;
+        }
+      }catch(e){
+        failList.push(date + '：' + e.message);
+      }
+      await renderProgress();
+    }
+    if(!batchAiStopFlag){
+      batchAiStatus.textContent = '全部完成！成功 ' + done + ' / ' + pending.length + ' 天。' + (failList.length ? ('　失敗：' + failList.join('；')) : '');
+    }
+    batchAiBtn.disabled = false;
+    stopBatchAiBtn.disabled = true;
+  });
+  stopBatchAiBtn.addEventListener('click', function(){ batchAiStopFlag = true; });
+
+  (async function init(){
+    var saved = await idbGetHandle();
+    if(saved){
+      try{
+        var perm = await saved.queryPermission({mode:'readwrite'});
+        if(perm === 'granted'){
+          dirHandle = saved;
+          folderStatus.textContent = '已選擇資料夾：' + saved.name;
+          pathHint.style.display = 'block';
+          chatBtn.disabled = false;
+          splitStatus.textContent = '已就緒，請選擇聊天紀錄檔案。';
+          await renderProgress();
+        } else {
+          folderStatus.textContent = '先前選過資料夾「' + saved.name + '」，按下方「選擇聊天紀錄檔案並開始分割」時會自動跳出重新授權提示，或你也可以按上方「選擇記憶資料夾」重新選一次。';
+          chatBtn.disabled = false;
+        }
+      }catch(e){}
+    }
+  })();
+})();
+</script>
+</body>
+</html>

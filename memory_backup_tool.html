@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Amber</title>
+<link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/Tabby1112/Memory-Amber@main/IMG_0170.png">
+<style>
+  :root {
+    --ink: #14171F;
+    --surface: #1E2330;
+    --surface-raised: #262C3D;
+    --amber: #C9974D;
+    --amber-glow: #E8C87E;
+    --amber-dim: #8A6B3A;
+    --text-primary: #EDE6D6;
+    --text-secondary: #9CA3B0;
+    --text-tertiary: #6B7280;
+    --teal: #6FA88E;
+    --line: rgba(237, 230, 214, 0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ink);
+    color: var(--text-primary);
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, sans-serif;
+    line-height: 1.75;
+    min-height: 100vh;
+    padding: 0 20px;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 72px 0 100px;
+  }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 64px;
+  }
+
+  .eyebrow {
+    font-family: "JetBrains Mono", "Courier New", monospace;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    color: var(--amber-dim);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-family: "Noto Serif TC", "Songti TC", serif;
+    font-size: clamp(24px, 4.5vw, 32px);
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .subtitle {
+    font-family: "Noto Serif TC", serif;
+    font-style: italic;
+    font-size: 16px;
+    color: var(--amber-glow);
+    letter-spacing: 0.02em;
+    margin-bottom: 20px;
+  }
+
+  .hero-sub {
+    color: var(--text-secondary);
+    font-size: 15px;
+    max-width: 440px;
+    margin: 0 auto;
+  }
+
+  .bead-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 56px 0 64px;
+  }
+
+  .bead {
+    position: relative;
+    width: 168px;
+    height: 168px;
+    border-radius: 50%;
+    background:
+      url(https://cdn.jsdelivr.net/gh/Tabby1112/Memory-Amber@main/IMG_0170.png) center 54% / 80% auto no-repeat,
+      radial-gradient(circle at 32% 28%, rgba(255,255,255,0.35), transparent 40%),
+      radial-gradient(circle at 65% 70%, var(--amber-glow), var(--amber) 55%, var(--amber-dim) 100%);
+    box-shadow:
+      0 0 0 1px rgba(232, 200, 126, 0.25),
+      0 20px 60px rgba(201, 151, 77, 0.25),
+      inset 0 -8px 20px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+  }
+
+  .bead:active { cursor: grabbing; }
+
+  .bead-label {
+    font-family: "Noto Serif TC", serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #2A1F0E;
+    text-align: center;
+    line-height: 1.4;
+    padding: 0 20px;
+    text-decoration: none;
+    user-select: none;
+  }
+
+  .drag-hint {
+    margin-top: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--amber);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .drag-hint svg {
+    animation: bob 1.6s ease-in-out infinite;
+  }
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  .section-title {
+    font-family: "Noto Serif TC", serif;
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    margin: 56px 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .step {
+    display: flex;
+    gap: 18px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    color: var(--amber);
+  }
+
+  .step-body h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  .step-body p {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .step-body code {
+    font-family: "JetBrains Mono", monospace;
+    background: var(--surface-raised);
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 13px;
+    color: var(--amber-glow);
+  }
+
+  .notice {
+    margin-top: 48px;
+    padding: 20px 22px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--teal);
+    border-radius: 8px;
+  }
+
+  .notice h4 {
+    font-size: 14px;
+    color: var(--teal);
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+
+  .notice p {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+  }
+
+  .notice p + p { margin-top: 8px; }
+
+  footer {
+    margin-top: 56px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+
+  @media (max-width: 480px) {
+    .wrap { padding: 48px 0 72px; }
+    .bead { width: 140px; height: 140px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <h1>Memory Amber</h1>
+    <div class="subtitle">Chosen, Choosing, To Choose.</div>
+    <p class="hero-sub">一顆拖進書籤列的琥珀。點一下，就把卿卿我我故事裡的記憶，完整封存成一份可以留存的檔案。</p>
+  </div>
+
+  <div class="bead-stage">
+    <a class="bead"
+       href="javascript:(function(){if(window.__memAmberOpen){return;}window.__memAmberOpen=true;var mainWin=window;var DAILY_FOLDER_NAME='Memory Amber';function sleep(t){return new Promise(function(r){setTimeout(r,t);});}function findScrollables(){var nodes=document.querySelectorAll('*');var arr=[];for(var i=0;i<nodes.length;i++){var el=nodes[i];var cs=getComputedStyle(el);if((cs.overflowY==='auto'||cs.overflowY==='scroll')&amp;&amp;el.scrollHeight>el.clientHeight+40){arr.push(el);}}return arr;}function fireScrollEvents(el,isWin){try{var target=isWin?mainWin:el;var ev1=new Event('scroll',{bubbles:true,cancelable:true});target.dispatchEvent(ev1);var ev2=new WheelEvent('wheel',{bubbles:true,cancelable:true,deltaY:40});(isWin?document.body:el).dispatchEvent(ev2);}catch(e){}}async function stepScroll(el,isWin){var getTop=function(){return isWin?mainWin.scrollY:el.scrollTop;};var getHeight=function(){return isWin?document.body.scrollHeight:el.scrollHeight;};var setTop=function(v){if(isWin){mainWin.scrollTo(0,v);}else{el.scrollTop=v;}};var retreatBy=Math.min(300,getTop());setTop(Math.max(0,getTop()-retreatBy));fireScrollEvents(el,isWin);await sleep(180);var target=getHeight();var cur=getTop();var step=45;var guard=0;while(cur<target&amp;&amp;guard<400){cur=Math.min(target,cur+step);setTop(cur);fireScrollEvents(el,isWin);await sleep(45);guard++;}}async function wiggleScroll(scrollables){for(var rep=0;rep<2;rep++){for(var i=0;i<scrollables.length;i++){try{await stepScroll(scrollables[i],false);}catch(e){}}await stepScroll(null,true);await sleep(300);}}var dateRegex=/^\d{4}-\d{2}-\d{2}$/;function scanEarliestDate(){var h4s=document.querySelectorAll('h4');var last=null;h4s.forEach(function(el){var t=(el.textContent||'').trim();if(dateRegex.test(t))last=t;});return last;}function extractMemories(){var elements=Array.prototype.slice.call(document.querySelectorAll('h4,p'));var currentDate=null;var memories=[];var dayIndex=0;var lastDate=null;elements.forEach(function(el){var text=(el.textContent||'').trim();if(el.tagName==='H4'){if(dateRegex.test(text)){currentDate=text;}}else if(el.tagName==='P'){if(currentDate&amp;&amp;isRealCardParagraph(el)){if(currentDate!==lastDate){dayIndex=0;lastDate=currentDate;}dayIndex++;memories.push({date:currentDate,index:dayIndex,content:text});}}});return memories;}function filterMemories(memories,startDate,endDate){return memories.filter(function(m){if(startDate&amp;&amp;m.date>startDate)return false;if(endDate&amp;&amp;m.date<endDate)return false;return true;});}function buildTxt(memories){var lines=[];var lastD=null;memories.forEach(function(m){if(m.date!==lastD){lines.push('');lines.push('====== '+m.date+' ======');lastD=m.date;}lines.push('');lines.push('['+m.index+'] '+m.content);});return lines.join('\n');}function idbOpen(){return new Promise(function(resolve,reject){var req=indexedDB.open('memAmberDB',1);req.onupgradeneeded=function(){req.result.createObjectStore('handles');};req.onsuccess=function(){resolve(req.result);};req.onerror=function(){reject(req.error);};});}async function idbGetHandle(){var db=await idbOpen();return new Promise(function(resolve,reject){var tx=db.transaction('handles','readonly');var req=tx.objectStore('handles').get('folder');req.onsuccess=function(){resolve(req.result||null);};req.onerror=function(){reject(req.error);};});}async function idbSetHandle(handle){var db=await idbOpen();return new Promise(function(resolve,reject){var tx=db.transaction('handles','readwrite');tx.objectStore('handles').put(handle,'folder');tx.oncomplete=function(){resolve();};tx.onerror=function(){reject(tx.error);};});}async function writeFile(dirHandle,filename,contents){var fh=await dirHandle.getFileHandle(filename,{create:true});var w=await fh.createWritable();await w.write(contents);await w.close();}async function listFolder(dirHandle){var names=[];for await(var entry of dirHandle.values()){names.push(entry.name);}return names;}function findCardElement(targetDate,targetIndex){var elements=Array.prototype.slice.call(document.querySelectorAll('h4,p'));var currentDate=null;var dayIndex=0;var lastDate=null;for(var i=0;i<elements.length;i++){var el=elements[i];var text=(el.textContent||'').trim();if(el.tagName==='H4'){if(dateRegex.test(text))currentDate=text;}else if(el.tagName==='P'){if(currentDate&amp;&amp;isRealCardParagraph(el)){if(currentDate!==lastDate){dayIndex=0;lastDate=currentDate;}dayIndex++;if(currentDate===targetDate&amp;&amp;dayIndex===targetIndex){return el;}}}}return null;}function findThreeDotButton(pEl){var el=pEl;for(var level=0;level<6&amp;&amp;el;level++){var btns=el.querySelectorAll?el.querySelectorAll('button'):[];for(var i=0;i<btns.length;i++){var paths=btns[i].querySelectorAll('path');for(var j=0;j<paths.length;j++){var d=paths[j].getAttribute('d')||'';if(d.indexOf('10,19c0-1.1.9-2,2-2s2,.9,2,2-.9,2-2,2-2-.9-2-2')!==-1){return btns[i];}}}el=el.parentElement;}return null;}function isRealCardParagraph(pEl){return!!findThreeDotButton(pEl);}function clickByExactText(selector,text){var nodes=document.querySelectorAll(selector);for(var i=0;i<nodes.length;i++){if((nodes[i].textContent||'').trim()===text){nodes[i].click();return true;}}return false;}function setReactValue(el,value){var proto=el.tagName==='TEXTAREA'?window.HTMLTextAreaElement.prototype:window.HTMLInputElement.prototype;var desc=Object.getOwnPropertyDescriptor(proto,'value');desc.set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}function findByExactText(selector,text){var nodes=document.querySelectorAll(selector);for(var i=0;i<nodes.length;i++){if((nodes[i].textContent||'').trim()===text){return nodes[i];}}return null;}async function writeOneEntry(entry){var pEl=findCardElement(entry.date,parseInt(entry.index,10));if(!pEl){await sleep(1200);pEl=findCardElement(entry.date,parseInt(entry.index,10));}if(!pEl){return{ok:false,reason:'找不到對應卡片（可能尚未捲動載入到這一天，請先在原分頁捲動靠近這個日期）'};}var currentText=(pEl.textContent||'').trim();if(currentText===(entry.newContent||'').trim()){return{ok:true,skipped:true,reason:'內容已相同，略過'};}var menuBtn=findThreeDotButton(pEl);if(!menuBtn){return{ok:false,reason:'找不到選單按鈕'};}menuBtn.click();await sleep(500);var clicked=clickByExactText('span','更正');if(!clicked){return{ok:false,reason:'找不到「更正」選項'};}await sleep(600);var textarea=document.querySelector('textarea[placeholder=\'輸入記憶\']');if(!textarea){return{ok:false,reason:'找不到編輯輸入框'};}setReactValue(textarea,entry.newContent);await sleep(400);var counterEl=null;var spans=document.querySelectorAll('span');for(var i=0;i<spans.length;i++){var t=(spans[i].textContent||'').trim();if(/^\d+\s*\/\s*\d+$/.test(t)){counterEl=spans[i];break;}}if(counterEl){var parts=counterEl.textContent.split('/');var cur=parseInt(parts[0].trim(),10);var max=parseInt(parts[1].trim(),10);if(cur>max){return{ok:false,reason:'新內容超過字數上限（'+cur+'/'+max+'），已略過未儲存'};}}var finishBtn=findByExactText('button','完成');if(!finishBtn){return{ok:false,reason:'找不到「完成」按鈕'};}if(finishBtn.disabled){return{ok:false,reason:'「完成」按鈕未啟用，可能內容與原本相同或未被網站偵測到變更'};}finishBtn.click();await sleep(900);return{ok:true};}var popup=mainWin.open('','__memAmberPopup','width=520,height=800,resizable=yes,scrollbars=yes');if(!popup){alert('瀏覽器擋下了彈出視窗，請允許這個網站的彈出視窗後再點一次書籤。');mainWin.__memAmberOpen=false;return;}var pd=popup.document;pd.title='記憶封存 · 控制台';pd.body.style.cssText='margin:0;background:%2314171F;color:%23EDE6D6;font-family:Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif;padding:0;box-sizing:border-box;';pd.body.innerHTML='<div style=\'padding:32px 32px 24px;text-align:center;border-bottom:1px solid rgba(237,230,214,0.1);\'><div style=\'font-family:monospace;font-size:11px;letter-spacing:0.2em;color:%238A6B3A;text-transform:uppercase;margin-bottom:12px;\'>Memory Amber · 控制台</div><div style=\'width:76px;height:76px;margin:0 auto 14px;border-radius:50%;background:url(https://cdn.jsdelivr.net/gh/Tabby1112/Memory-Amber@main/IMG_0170.png) center 52% / 54% auto no-repeat, radial-gradient(circle at 32% 28%, rgba(255,255,255,0.35), transparent 40%), radial-gradient(circle at 65% 70%, %23E8C87E, %23C9974D 55%, %238A6B3A 100%);box-shadow:0 0 0 1px rgba(232,200,126,0.25), 0 14px 40px rgba(201,151,77,0.25);\'></div><h1 style=\'font-family:serif;font-size:20px;font-weight:700;margin:0;color:%23EDE6D6;\'>記憶封存控制台</h1></div><div style=\'padding:22px 32px;border-bottom:1px solid rgba(237,230,214,0.1);\'><div style=\'font-size:11px;letter-spacing:0.1em;color:%236B7280;text-transform:uppercase;margin-bottom:10px;\'>記憶資料夾</div><div id=\'__mem_folder_status\' style=\'font-size:13px;color:%239CA3B0;margin-bottom:10px;line-height:1.6;\'>尚未選擇資料夾。請選擇或建立一個本機資料夾，備份檔案會直接寫入這裡。</div><button id=\'__mem_folder_btn\' style=\'width:100%;padding:11px;border:1px solid rgba(232,200,126,0.4);border-radius:8px;background:transparent;color:%23E8C87E;font-weight:bold;cursor:pointer;font-size:13px;\'>選擇 / 建立記憶資料夾</button></div><div style=\'padding:22px 32px;border-bottom:1px solid rgba(237,230,214,0.1);\'><div style=\'font-size:12.5px;color:%239CA3B0;margin-bottom:6px;\'>起始日期（較新，選填）</div><input id=\'__mem_start_date\' type=\'text\' placeholder=\'例如 2026-07-23\' style=\'width:100%;padding:11px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:%231E2330;color:%23EDE6D6;font-size:14px;margin-bottom:16px;box-sizing:border-box;\'><div style=\'font-size:12.5px;color:%239CA3B0;margin-bottom:6px;\'>結束日期（較舊，<span style=\'color:%23E8C87E;\'>必填</span>，抓到此日期會自動停止）</div><input id=\'__mem_end_date\' type=\'text\' placeholder=\'例如 2024-09-07（必填）\' style=\'width:100%;padding:11px 12px;border-radius:8px;border:1px solid rgba(232,151,77,0.5);background:%231E2330;color:%23EDE6D6;font-size:14px;margin-bottom:22px;box-sizing:border-box;\'><div style=\'display:flex;gap:10px;margin-bottom:22px;\'><button id=\'__mem_start_btn\' style=\'flex:1;padding:13px;border:none;border-radius:8px;background:%23C9974D;color:%2314171F;font-weight:bold;cursor:pointer;font-size:14px;\'>開始擷取並存入資料夾</button><button id=\'__mem_stop_btn\' style=\'flex:1;padding:13px;border:1px solid rgba(232,200,126,0.4);border-radius:8px;background:transparent;color:%23E8C87E;font-weight:bold;cursor:pointer;font-size:14px;\' disabled>停止並存檔</button></div><div style=\'padding-top:18px;border-top:1px solid rgba(237,230,214,0.1);\'><div style=\'font-size:11px;letter-spacing:0.1em;color:%236B7280;text-transform:uppercase;margin-bottom:10px;\'>目前狀態</div><div id=\'__mem_status\' style=\'font-size:13.5px;color:%239CA3B0;line-height:1.7;\'>請先選擇記憶資料夾，再填寫結束日期後開始擷取。</div></div></div><div style=\'padding:22px 32px;\'><div style=\'font-size:11px;letter-spacing:0.1em;color:%236B7280;text-transform:uppercase;margin-bottom:10px;\'>比對Memory Amber</div><div id=\'__mem_diff_status\' style=\'font-size:13px;color:%239CA3B0;margin-bottom:10px;line-height:1.6;\'>用「對話拆解工具」整理好至少一天之後，按下方按鈕直接掃描Memory Amber並比對。</div><button id=\'__mem_diff_btn\' style=\'width:100%;padding:11px;border:1px solid rgba(232,200,126,0.4);border-radius:8px;background:transparent;color:%23E8C87E;font-weight:bold;cursor:pointer;font-size:13px;margin-bottom:12px;\'>掃描Memory Amber並比對</button><div id=\'__mem_diff_results\' style=\'max-height:300px;overflow-y:auto;font-size:12.5px;line-height:1.6;background:%231E2330;border:1px solid rgba(237,230,214,0.08);border-radius:8px;padding:4px 12px;\'></div><div style=\'display:flex;gap:10px;margin-top:14px;\'><button id=\'__mem_test_write_btn\' style=\'flex:1;padding:11px;border:1px solid rgba(232,200,126,0.4);border-radius:8px;background:transparent;color:%23E8C87E;font-weight:bold;cursor:pointer;font-size:13px;\'>測試寫入第一筆</button><button id=\'__mem_batch_write_btn\' style=\'flex:1;padding:11px;border:none;border-radius:8px;background:%23C15B4E;color:%23FFFFFF;font-weight:bold;cursor:pointer;font-size:13px;\'>開始批次覆寫</button></div><button id=\'__mem_stop_write_btn\' style=\'width:100%;padding:10px;margin-top:8px;border:1px solid rgba(232,200,126,0.4);border-radius:8px;background:transparent;color:%23E8C87E;font-weight:bold;cursor:pointer;font-size:13px;\' disabled>停止覆寫</button><div id=\'__mem_write_status\' style=\'font-size:13px;color:%239CA3B0;margin-top:10px;line-height:1.6;\'>尚未開始寫回。請先完成上方比對。</div></div>';var folderBtn=pd.querySelector('#__mem_folder_btn');var folderStatusEl=pd.querySelector('#__mem_folder_status');var startBtn=pd.querySelector('#__mem_start_btn');var stopBtn=pd.querySelector('#__mem_stop_btn');var startDateInput=pd.querySelector('#__mem_start_date');var endDateInput=pd.querySelector('#__mem_end_date');var statusEl=pd.querySelector('#__mem_status');var stopFlag=false;var running=false;var dirHandle=null;var lastDiff=null;function setStatus(msg){statusEl.textContent=msg;}function setFolderStatus(msg){folderStatusEl.textContent=msg;}async function refreshFolderInfo(){if(!dirHandle){setFolderStatus('尚未選擇資料夾。請選擇或建立一個本機資料夾，備份檔案會直接寫入這裡。');return;}try{var names=await listFolder(dirHandle);var hasDaily=names.indexOf(DAILY_FOLDER_NAME)!==-1;setFolderStatus('已選擇資料夾：'+dirHandle.name+'　（內含 '+names.length+' 個項目，'+(hasDaily?'Memory Amber已建立':'尚無備份')+'）');}catch(e){setFolderStatus('資料夾讀取發生問題：'+e.message);}}(async function init(){try{var saved=await idbGetHandle();if(saved){var perm=await saved.queryPermission({mode:'readwrite'});if(perm==='granted'){dirHandle=saved;await refreshFolderInfo();}else{setFolderStatus('先前選過資料夾「'+saved.name+'」，請按下方按鈕重新授權。');}}}catch(e){}})();folderBtn.addEventListener('click',async function(){try{var handle=await popup.showDirectoryPicker({mode:'readwrite'});dirHandle=handle;await idbSetHandle(handle);await refreshFolderInfo();}catch(e){if(e&amp;&amp;e.name!=='AbortError'){setFolderStatus('選擇資料夾失敗：'+e.message);}}});startBtn.addEventListener('click',function(){if(running)return;if(!dirHandle){setStatus('請先選擇記憶資料夾，才能開始擷取。');return;}var endDate=endDateInput.value.trim();if(!dateRegex.test(endDate)){setStatus('請先填寫正確格式的結束日期（例如 2024-09-07）才能開始。');return;}running=true;stopFlag=false;startBtn.disabled=true;stopBtn.disabled=false;runLoop();});stopBtn.addEventListener('click',function(){stopFlag=true;setStatus('已收到停止指令，正在整理並存入資料夾...');});async function runLoop(){var startDate=startDateInput.value.trim();var endDate=endDateInput.value.trim();var round=0;var reached=false;while(!stopFlag&amp;&amp;round<5000){var scrollables=findScrollables();await wiggleScroll(scrollables);round++;var earliest=scanEarliestDate();setStatus('第'+round+'輪　可捲動區域：'+scrollables.length+'　目前最早日期：'+(earliest||'尚未偵測到')+'　持續捲動中...');if(earliest&amp;&amp;earliest<=endDate){reached=true;break;}}if(reached&amp;&amp;!stopFlag){for(var confirmRound=1;confirmRound<=4&amp;&amp;!stopFlag;confirmRound++){setStatus('已偵測到結束日期 '+endDate+'，確認是否真的捲到底（'+confirmRound+'/4）...');var scrollables2=findScrollables();await wiggleScroll(scrollables2);}if(!stopFlag){setStatus('確認完成，準備存檔...');}}var memories=extractMemories();memories=filterMemories(memories,startDate,endDate);if(memories.length===0){setStatus('沒有偵測到符合範圍的記憶內容，請確認日期格式或範圍設定。');}else{try{var todayStr=new Date().toISOString().slice(0,10);var txtStr=buildTxt(memories);await writeFile(dirHandle,todayStr+'_backup.txt',txtStr);var byDate={};memories.forEach(function(m){if(!byDate[m.date])byDate[m.date]=[];byDate[m.date].push(m);});var dailyRoot=await dirHandle.getDirectoryHandle(DAILY_FOLDER_NAME,{create:true});var dateKeys=Object.keys(byDate);for(var di=0;di<dateKeys.length;di++){var d=dateKeys[di];var dayHandle=await dailyRoot.getDirectoryHandle(d,{create:true});var dayLines=[];byDate[d].sort(function(a,b){return a.index-b.index;}).forEach(function(m){dayLines.push('['+m.index+'] '+m.content);dayLines.push('');});await writeFile(dayHandle,d+'原記憶體.txt',dayLines.join('\n').trim());}setStatus('完成！共封存 '+memories.length+' 則記憶，已寫入 '+todayStr+'_backup.txt 與Memory Amber（'+dateKeys.length+' 天）。');await refreshFolderInfo();}catch(e){setStatus('寫入資料夾失敗：'+e.message);}}running=false;startBtn.disabled=false;stopBtn.disabled=true;}var diffBtn=pd.querySelector('#__mem_diff_btn');var diffStatusEl=pd.querySelector('#__mem_diff_status');var diffResultsEl=pd.querySelector('#__mem_diff_results');function escapeHtml(s){return s.replace(/&amp;/g,'&amp;amp;').replace(/</g,'&amp;lt;').replace(/>/g,'&amp;gt;');}function statusLabel(s){if(s==='changed')return'將覆寫';if(s==='same')return'無變化';if(s==='missing')return'舊資料有但新檔案沒有（將維持原樣）';return s;}function statusColor(s){if(s==='changed')return'#E8C87E';if(s==='same')return'#6B7280';if(s==='missing')return'#6FA88E';return'#9CA3B0';}function parseDayTxt(text){var lines=text.split(/\r?\n/);var entries=[];var currentIndex=null;var buffer=[];function flush(){if(currentIndex!=null){var joined=buffer.join('\n').trim();if(joined)entries.push({index:currentIndex,content:joined});}buffer=[];}var idxLineRe=/^\[(\d+)\]\s?(.*)$/;lines.forEach(function(line){var im=line.match(idxLineRe);if(im){flush();currentIndex=parseInt(im[1],10);buffer.push(im[2]);return;}if(line.trim()===''){buffer.push('');return;}buffer.push(line);});flush();return entries;}async function scanAndBuildDiff(){var root=await dirHandle.getDirectoryHandle(DAILY_FOLDER_NAME);var diff=[];for await(var entry of root.values()){if(entry.kind!=='directory')continue;var date=entry.name;if(!dateRegex.test(date))continue;var oldText=null,newText=null;try{var fh1=await entry.getFileHandle(date+'原記憶體.txt');var f1=await fh1.getFile();oldText=await f1.text();}catch(e){}try{var fh2=await entry.getFileHandle(date+'新記憶體.txt');var f2=await fh2.getFile();newText=await f2.text();}catch(e){}if(oldText===null||newText===null)continue;var oldEntries=parseDayTxt(oldText);var newEntries=parseDayTxt(newText);var oldMap={};oldEntries.forEach(function(e){oldMap[e.index]=e.content;});var newMap={};newEntries.forEach(function(e){newMap[e.index]=e.content;});var keys={};Object.keys(oldMap).forEach(function(k){keys[k]=true;});Object.keys(newMap).forEach(function(k){keys[k]=true;});Object.keys(keys).map(Number).sort(function(a,b){return a-b;}).forEach(function(idx){var oldC=oldMap.hasOwnProperty(idx)?oldMap[idx]:null;var newC=newMap.hasOwnProperty(idx)?newMap[idx]:null;if(oldC===null)return;var status;if(newC===null)status='missing';else if(oldC===newC)status='same';else status='changed';diff.push({date:date,index:idx,oldContent:oldC,newContent:newC,status:status});});}return diff;}diffBtn.addEventListener('click',async function(){if(!dirHandle){diffStatusEl.textContent='請先選擇記憶資料夾。';return;}try{diffStatusEl.textContent='掃描Memory Amber中...';var diff=await scanAndBuildDiff();lastDiff=diff;var changed=diff.filter(function(d){return d.status==='changed';});var missing=diff.filter(function(d){return d.status==='missing';});diffStatusEl.textContent='比對完成：共 '+diff.length+' 筆　將覆寫 '+changed.length+' 筆　缺漏（維持原樣）'+missing.length+' 筆。';var html='';diff.forEach(function(d){if(d.status==='same')return;html+='<div style=\'padding:10px 0;border-bottom:1px solid rgba(237,230,214,0.08);\'>';html+='<div style=\'color:'+statusColor(d.status)+';font-weight:bold;margin-bottom:4px;\'>'+d.date+' ・ 第'+d.index+'則 ・ '+statusLabel(d.status)+'</div>';if(d.oldContent!==null){html+='<div style=\'color:#6B7280;margin-bottom:3px;\'>舊：'+escapeHtml(d.oldContent).slice(0,80)+(d.oldContent.length>80?'...':'')+'</div>';}if(d.newContent!==null){html+='<div style=\'color:#EDE6D6;\'>新：'+escapeHtml(d.newContent).slice(0,80)+(d.newContent.length>80?'...':'')+'</div>';}html+='</div>';});diffResultsEl.innerHTML=html||'<div style=\'color:#6B7280;\'>沒有偵測到差異。</div>';}catch(e){diffStatusEl.textContent='比對失敗：'+e.message+'（請確認Memory Amber存在，且至少有一天同時具備原記憶體與新記憶體檔案）';}});var testWriteBtn=pd.querySelector('#__mem_test_write_btn');var batchWriteBtn=pd.querySelector('#__mem_batch_write_btn');var stopWriteBtn=pd.querySelector('#__mem_stop_write_btn');var writeStatusEl=pd.querySelector('#__mem_write_status');var writeStopFlag=false;function logWrite(msg){writeStatusEl.textContent=msg;}testWriteBtn.addEventListener('click',async function(){if(!lastDiff){logWrite('請先完成上方比對。');return;}var changed=lastDiff.filter(function(d){return d.status==='changed';});if(changed.length===0){logWrite('沒有需要覆寫的項目。');return;}testWriteBtn.disabled=true;batchWriteBtn.disabled=true;var entry=changed[0];logWrite('測試中：'+entry.date+' 第'+entry.index+'則...');var result=await writeOneEntry({date:entry.date,index:entry.index,newContent:entry.newContent});if(result.ok){logWrite('測試成功！已寫入 '+entry.date+' 第'+entry.index+'則。請回到原分頁確認內容正確後，再執行「開始批次覆寫」。');}else{logWrite('測試失敗：'+result.reason);}testWriteBtn.disabled=false;batchWriteBtn.disabled=false;});batchWriteBtn.addEventListener('click',async function(){if(!lastDiff){logWrite('請先完成上方比對。');return;}var changed=lastDiff.filter(function(d){return d.status==='changed';});if(changed.length===0){logWrite('沒有需要覆寫的項目。');return;}if(!popup.confirm('即將覆寫 '+changed.length+' 筆記憶內容，此動作無法復原。是否確定執行？')){return;}writeStopFlag=false;testWriteBtn.disabled=true;batchWriteBtn.disabled=true;stopWriteBtn.disabled=false;var successCount=0;var skippedCount=0;var failList=[];for(var i=0;i<changed.length;i++){if(writeStopFlag){logWrite('已手動停止。完成 '+successCount+' / '+changed.length+' 筆。');break;}var entry=changed[i];logWrite('（'+(i+1)+'/'+changed.length+'）處理 '+entry.date+' 第'+entry.index+'則...');var result=await writeOneEntry({date:entry.date,index:entry.index,newContent:entry.newContent});if(result.ok){if(result.skipped){skippedCount++;}else{successCount++;}}else{failList.push(entry.date+' 第'+entry.index+'則：'+result.reason);}await sleep(1000);}if(!writeStopFlag){logWrite('全部完成！實際寫入 '+successCount+' 筆，略過（內容已相同）'+skippedCount+' 筆，共 '+changed.length+' 筆。'+(failList.length?('　失敗：'+failList.join('；')):''));}testWriteBtn.disabled=false;batchWriteBtn.disabled=false;stopWriteBtn.disabled=true;try{await writeFile(dirHandle,'writeback_log_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({success:successCount,total:changed.length,failures:failList},null,2));}catch(e){}});stopWriteBtn.addEventListener('click',function(){writeStopFlag=true;});popup.addEventListener('beforeunload',function(){mainWin.__memAmberOpen=false;});})();"
+       title="拖曳我到書籤列">
+    </a>
+    <div class="drag-hint">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 14V3M8 3L4 7M8 3L12 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      拖曳這顆琥珀到瀏覽器書籤列
+    </div>
+  </div>
+
+  <div class="section-title">安裝方式</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>顯示書籤列</h3>
+      <p>如果瀏覽器上方沒有看到書籤列，先按 <code>Ctrl/Cmd + Shift + B</code> 顯示它。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>拖曳琥珀到書籤列</h3>
+      <p>用滑鼠按住上方那顆琥珀羽毛，拖到書籤列上放開，就會變成一個書籤按鈕。如果拖曳沒有反應，也可以右鍵複製連結網址，手動新增書籤貼上。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>打開卿卿我我網頁</h3>
+      <p>登入你的帳號，進入你想備份的角色記憶體列表頁面（能看到日期與記憶卡片的那一頁）。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>點一下書籤</h3>
+      <p>點擊剛剛加入的書籤，會跳出一個獨立的控制台視窗。選擇（或建立）記憶資料夾、填寫結束日期後，按「開始擷取並存入資料夾」，工具會自動幫你捲動頁面、依日期封存記憶。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <h3>比對與覆寫</h3>
+      <p>用「<a href="memory_organizer_tool.html" style="color: var(--amber-glow);">對話拆解工具</a>」整理好至少一天的內容後（需將兩份檔案放在同一個資料夾，連結才能開啟），回到這個控制台，按「掃描Memory Amber並比對」，確認差異無誤後，可以先「測試寫入第一筆」，確認無誤再「開始批次覆寫」。</p>
+    </div>
+  </div>
+
+  <div class="notice">
+    <h4>使用須知</h4>
+    <p>這顆書籤只在你自己的瀏覽器、自己登入的帳號內運作，不會把資料傳到任何外部伺服器——所有內容都只讀寫你自己選擇的本機資料夾。</p>
+    <p>控制台會以獨立彈出視窗顯示，不會遮住記憶體頁面內容。如果瀏覽器擋下彈出視窗，請允許此網站的彈出視窗後再點一次書籤。</p>
+    <p>記憶數量多時，捲動可能需要一段時間，請耐心等待彈出視窗中的進度提示。覆寫記憶內容是不可逆的動作，請務必先測試單筆無誤後，再執行批次覆寫。</p>
+  </div>
+
+  <footer>製作者：Tabby 塔比 · 僅限 LoveyDovey 網頁版使用</footer>
+
+</div>
+</body>
+</html>
