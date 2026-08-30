@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -54,6 +55,29 @@
   .tag-pending { background: rgba(155,163,176,0.15); color: var(--text-secondary); }
   footer { text-align: center; font-size: 12px; color: var(--text-tertiary); margin-top: 40px; }
   .path-hint { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--text-tertiary); background: var(--ink); border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; white-space: pre; overflow-x: auto; }
+
+  /* ── 批次勾選清單 ── */
+  .batch-select-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; margin-bottom: 8px;
+    background: var(--surface-raised); border-radius: 8px;
+  }
+  .batch-select-bar label { margin: 0; font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+  .batch-select-bar input[type=checkbox] { width: auto; cursor: pointer; accent-color: var(--amber); }
+  #batch_selected_count { font-size: 12px; color: var(--text-tertiary); margin-left: auto; white-space: nowrap; }
+  #batch_date_list {
+    max-height: 220px; overflow-y: auto;
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 4px 12px; margin-bottom: 12px; font-size: 13px;
+  }
+  .batch-date-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 0; border-bottom: 1px solid var(--line); cursor: pointer;
+  }
+  .batch-date-row:last-child { border-bottom: none; }
+  .batch-date-row input[type=checkbox] { width: auto; cursor: pointer; accent-color: var(--amber); flex-shrink: 0; }
+  .batch-date-row span.date-label { flex: 1; }
+  .batch-empty { color: var(--text-tertiary); padding: 10px 0; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -164,14 +188,27 @@
     <div class="status-line" id="progress_summary">請先完成上方步驟以載入進度。</div>
     <div class="row"><button class="btn-outline" id="refresh_btn">重新整理進度</button></div>
     <div class="divider"></div>
+
     <div class="card-title">批次自動整理（依上方選擇的 AI 服務與金鑰）</div>
-    <div class="status-line" style="margin-bottom:10px;">會依序處理所有「已有對話紀錄、尚無新記憶體」的日期。建議先在上方測試單一天沒問題後再使用。</div>
+    <div class="status-line" style="margin-bottom:12px;">勾選要處理的日期（只顯示「待整理」項目）。建議先在上方測試單一天沒問題後再使用。</div>
+
+    <!-- 全選列 -->
+    <div class="batch-select-bar">
+      <input type="checkbox" id="batch_select_all" disabled>
+      <label for="batch_select_all">全選 / 取消全選</label>
+      <span id="batch_selected_count"></span>
+    </div>
+
+    <!-- 勾選清單 -->
+    <div id="batch_date_list">
+      <div class="batch-empty">請先選擇記憶資料夾。</div>
+    </div>
+
     <div class="row">
-      <button class="btn-primary" id="batch_ai_btn">批次呼叫 AI 整理所有待整理日期</button>
+      <button class="btn-primary" id="batch_ai_btn">批次呼叫 AI 整理勾選日期</button>
       <button class="btn-outline" id="stop_batch_ai_btn" disabled>停止</button>
     </div>
     <div class="status-line" id="batch_ai_status" style="margin-top:12px;">尚未開始。</div>
-    <div class="progress-list" id="progress_list" style="margin-top:12px;"></div>
   </div>
 
   <footer>「Memory Amber」是工具的專屬資料夾，請不要手動更名，兩個工具都是靠這個固定名稱互相溝通的。</footer>
@@ -201,7 +238,6 @@
   var saveDayBtn = document.getElementById('save_day_btn');
   var dayStatus = document.getElementById('day_status');
   var progressSummary = document.getElementById('progress_summary');
-  var progressList = document.getElementById('progress_list');
   var refreshBtn = document.getElementById('refresh_btn');
   var providerSelect = document.getElementById('provider_select');
   var apiKeyInput = document.getElementById('api_key_input');
@@ -214,6 +250,14 @@
   var stopBatchAiBtn = document.getElementById('stop_batch_ai_btn');
   var batchAiStatus = document.getElementById('batch_ai_status');
 
+  // ── 批次勾選相關 ──
+  var batchDateList = document.getElementById('batch_date_list');
+  var batchSelectAll = document.getElementById('batch_select_all');
+  var batchSelectedCount = document.getElementById('batch_selected_count');
+
+  // ────────────────────────────────────────
+  // IndexedDB（記住資料夾 handle）
+  // ────────────────────────────────────────
   function idbOpen(){
     return new Promise(function(resolve,reject){
       var req = indexedDB.open('memAmberDB',1);
@@ -245,7 +289,9 @@
     }catch(e){}
   }
 
-  // 只讀檔案前面一小段，找出第一則對話的日期，不需要把整份檔案讀進來。
+  // ────────────────────────────────────────
+  // 只讀頭部，找第一個對話日期
+  // ────────────────────────────────────────
   async function peekFirstDate(file){
     var reader = file.stream().getReader();
     var decoder = new TextDecoder('utf-8');
@@ -259,7 +305,7 @@
         buffer += decoder.decode(res.value, {stream:true});
         var m = buffer.match(firstDateRe);
         if(m){ found = m[1]; break; }
-        if(buffer.length > 5*1024*1024) break; // 安全上限，避免開頭沒有正常格式時整份都讀進來
+        if(buffer.length > 5*1024*1024) break;
       }
     } finally {
       try{ await reader.cancel(); }catch(e){}
@@ -267,7 +313,6 @@
     return found;
   }
 
-  // 在已排序的日期陣列中，找出「大於等於 fromDate」的最小日期（往後找最近的資料夾）。
   function nextAvailableDate(sortedDates, fromDate){
     var lo=0, hi=sortedDates.length-1, ans=null;
     while(lo<=hi){
@@ -278,8 +323,9 @@
     return ans;
   }
 
-  // 邊讀邊寫：一次只在記憶體裡保留「目前這一組」的對話，寫完就丟掉，
-  // 不會把整份 37MB 的檔案一次全部塞進記憶體。
+  // ────────────────────────────────────────
+  // 邊讀邊寫，串流分割
+  // ────────────────────────────────────────
   async function streamSplitAndWrite(file, availableDates, opts, onStatus){
     var totalBytes = file.size;
     var processedBytes = 0;
@@ -366,6 +412,10 @@
 
     return { writtenCount: writtenCount, skippedOverwrite: skippedOverwrite, orphanNote: orphanNote };
   }
+
+  // ────────────────────────────────────────
+  // AI 呼叫工具
+  // ────────────────────────────────────────
   function countEntriesInDayTxt(text){
     if(!text) return 0;
     var matches = text.match(/^\[\d+\]/gm);
@@ -431,6 +481,9 @@
     return lines.join('\n').trim();
   }
 
+  // ────────────────────────────────────────
+  // 檔案系統操作
+  // ────────────────────────────────────────
   async function getDailyRoot(create){ return await dirHandle.getDirectoryHandle(DAILY_FOLDER_NAME, {create: !!create}); }
   async function getDayFolder(date, create){
     var root = await getDailyRoot(!!create);
@@ -467,6 +520,104 @@
     }catch(e){ return {hasOriginal:false, hasChat:false, hasNew:false}; }
   }
 
+  // ────────────────────────────────────────
+  // 批次勾選清單
+  // ────────────────────────────────────────
+
+  /** 更新「已選 N / M 天」文字，以及全選 checkbox 的狀態 */
+  function updateBatchSelectedCount(){
+    var checkboxes = Array.from(batchDateList.querySelectorAll('input[type=checkbox][data-date]'));
+    var checkedCount = checkboxes.filter(function(cb){ return cb.checked; }).length;
+    var total = checkboxes.length;
+
+    batchSelectedCount.textContent = total ? ('已選 ' + checkedCount + ' / ' + total + ' 天') : '';
+
+    if(total === 0){
+      batchSelectAll.indeterminate = false;
+      batchSelectAll.checked = false;
+    } else if(checkedCount === total){
+      batchSelectAll.indeterminate = false;
+      batchSelectAll.checked = true;
+    } else if(checkedCount === 0){
+      batchSelectAll.indeterminate = false;
+      batchSelectAll.checked = false;
+    } else {
+      batchSelectAll.indeterminate = true;
+    }
+  }
+
+  /** 重新生成批次勾選清單（待整理預設勾選、已完成預設不勾，由新到舊） */
+  async function populateBatchList(){
+    if(!dirHandle){
+      batchDateList.innerHTML = '<div class="batch-empty">請先選擇記憶資料夾。</div>';
+      batchSelectAll.disabled = true;
+      batchSelectedCount.textContent = '';
+      return;
+    }
+
+    batchDateList.innerHTML = '<div class="batch-empty">載入中...</div>';
+
+    var dates = await listAvailableDates();
+    // 收集「有對話紀錄」的日期，分成待整理與已完成兩組
+    var rows = [];
+    for(var i = 0; i < dates.length; i++){
+      var st = await dayFolderStatus(dates[i]);
+      if(st.hasChat){
+        rows.push({ date: dates[i], done: st.hasNew });
+      }
+    }
+
+    // 由新到舊排列
+    rows.sort(function(a, b){ return b.date.localeCompare(a.date); });
+
+    if(rows.length === 0){
+      batchDateList.innerHTML = '<div class="batch-empty">目前沒有可處理的日期。完成第二步分割後會自動出現。</div>';
+      batchSelectAll.disabled = true;
+      batchSelectedCount.textContent = '';
+      return;
+    }
+
+    batchSelectAll.disabled = false;
+
+    batchDateList.innerHTML = rows.map(function(r){
+      var checkedAttr = r.done ? '' : ' checked';          // 已完成預設不勾
+      var tagClass    = r.done ? 'tag-done'    : 'tag-partial';
+      var tagLabel    = r.done ? '已完成'      : '待整理';
+      return [
+        '<label class="batch-date-row">',
+        '  <input type="checkbox" data-date="' + r.date + '"' + checkedAttr + '>',
+        '  <span class="date-label">' + r.date + '</span>',
+        '  <span class="tag ' + tagClass + '">' + tagLabel + '</span>',
+        '</label>'
+      ].join('');
+    }).join('');
+
+    // 綁定每個 checkbox 的 change 事件
+    batchDateList.querySelectorAll('input[type=checkbox][data-date]').forEach(function(cb){
+      cb.addEventListener('change', updateBatchSelectedCount);
+    });
+
+    updateBatchSelectedCount();
+  }
+
+  /** 全選 / 取消全選 */
+  batchSelectAll.addEventListener('change', function(){
+    batchDateList.querySelectorAll('input[type=checkbox][data-date]').forEach(function(cb){
+      cb.checked = batchSelectAll.checked;
+    });
+    updateBatchSelectedCount();
+  });
+
+  /** 取得目前被勾選的日期（維持由舊到新順序，方便依序處理） */
+  function getCheckedDates(){
+    return Array.from(batchDateList.querySelectorAll('input[type=checkbox][data-date]:checked'))
+      .map(function(cb){ return cb.dataset.date; })
+      .sort(); // 由舊到新
+  }
+
+  // ────────────────────────────────────────
+  // 資料夾選擇
+  // ────────────────────────────────────────
   folderBtn.addEventListener('click', async function(){
     try{
       var handle = await window.showDirectoryPicker({mode:'readwrite'});
@@ -482,6 +633,9 @@
     }
   });
 
+  // ────────────────────────────────────────
+  // 分割聊天紀錄
+  // ────────────────────────────────────────
   chatBtn.addEventListener('click', async function(){
     if(chatBtn.disabled) return;
     chatBtn.disabled = true;
@@ -546,7 +700,7 @@
       await renderProgress();
     }catch(e){
       if(e && e.name === 'AbortError'){
-        splitStatus.textContent = '已取消檔案選擇（沒有選到檔案）。如果你只按過一次「選擇聊天紀錄檔案並開始分割」，這通常代表選檔視窗本身被關掉了，例如檔案存在 OneDrive 等雲端同步資料夾且尚未下載到本機，或選檔視窗被切到背景。';
+        splitStatus.textContent = '已取消檔案選擇。';
       } else {
         splitStatus.textContent = '處理失敗（' + (e && e.name) + '）：' + (e && e.message);
         try{ console.error('memory_organizer split error', e); }catch(err){}
@@ -556,14 +710,21 @@
     }
   });
 
+  // ────────────────────────────────────────
+  // 日期選單
+  // ────────────────────────────────────────
   function populateDateSelect(dates){
     dateSelect.innerHTML = dates.map(function(d){ return '<option value="'+d+'">'+d+'</option>'; }).join('');
     dateSelect.disabled = dates.length===0;
     loadDayBtn.disabled = dates.length===0;
   }
 
+  // ────────────────────────────────────────
+  // 第三步：逐日載入、複製、儲存
+  // ────────────────────────────────────────
   var currentDayRaw = null;
   var currentDayCount = 1;
+
   loadDayBtn.addEventListener('click', async function(){
     var date = dateSelect.value;
     if(!date) return;
@@ -613,26 +774,28 @@
 
   refreshBtn.addEventListener('click', renderProgress);
 
+  // ────────────────────────────────────────
+  // 進度總覽 + 同步刷新批次清單
+  // ────────────────────────────────────────
   async function renderProgress(){
-    if(!dirHandle){ progressSummary.textContent = '請先完成上方步驟以載入進度。'; progressList.innerHTML=''; return; }
+    if(!dirHandle){ progressSummary.textContent = '請先完成上方步驟以載入進度。'; await populateBatchList(); return; }
     var dates = await listAvailableDates();
     populateDateSelect(dates);
     var doneCount=0, partialCount=0;
-    var html = '';
-    for(var i=dates.length-1;i>=0;i--){
-      var d = dates[i];
-      var st = await dayFolderStatus(d);
-      var tag, label;
-      if(st.hasNew){ tag='tag-done'; label='已完成'; doneCount++; }
-      else if(st.hasChat){ tag='tag-partial'; label='待整理'; partialCount++; }
-      else { tag='tag-pending'; label='未產生對話紀錄'; }
-      html += '<div class="progress-item"><span>'+d+'</span><span class="tag '+tag+'">'+label+'</span></div>';
+    for(var i=0;i<dates.length;i++){
+      var st = await dayFolderStatus(dates[i]);
+      if(st.hasNew) doneCount++;
+      else if(st.hasChat) partialCount++;
     }
     progressSummary.textContent = '共 '+dates.length+' 天　已完成 '+doneCount+' 天　待整理 '+partialCount+' 天　尚未產生對話紀錄 '+(dates.length-doneCount-partialCount)+' 天';
-    progressList.innerHTML = html;
+
+    // 批次勾選清單即是唯一的日期總覽
+    await populateBatchList();
   }
 
-  // ---- API key persistence (plain local page, not a Claude artifact, localStorage is fine here) ----
+  // ────────────────────────────────────────
+  // API key persistence
+  // ────────────────────────────────────────
   (function initKeyStorage(){
     try{
       var savedProvider = localStorage.getItem('memAmber_provider');
@@ -665,11 +828,15 @@
   providerSelect.addEventListener('change', persistKeyIfNeeded);
   modelInput.addEventListener('change', persistKeyIfNeeded);
   instructionStyleArea.addEventListener('change', persistKeyIfNeeded);
+
   function buildInstruction(){
     var style = instructionStyleArea.value.trim() || '(未指定風格，請以中性客觀的第三人稱敘事摘要呈現)';
     return instructionFixedArea.value.replace('{{STYLE}}', style);
   }
 
+  // ────────────────────────────────────────
+  // AI 服務呼叫
+  // ────────────────────────────────────────
   async function callOpenAI(apiKey, model, prompt){
     var resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
@@ -709,6 +876,7 @@
     throw new Error('未知的 AI 服務');
   }
 
+  // 單日呼叫
   callAiBtn.addEventListener('click', async function(){
     var date = dateSelect.value;
     if(!currentDayRaw || !date){ dayStatus.textContent = '請先載入這天的對話紀錄。'; return; }
@@ -724,33 +892,41 @@
     callAiBtn.disabled = false;
   });
 
+  // ────────────────────────────────────────
+  // 批次呼叫 AI（依勾選）
+  // ────────────────────────────────────────
   var batchAiStopFlag = false;
+
   batchAiBtn.addEventListener('click', async function(){
     if(!dirHandle){ batchAiStatus.textContent = '請先選擇資料夾。'; return; }
     var apiKey = apiKeyInput.value.trim();
     if(!apiKey){ batchAiStatus.textContent = '請先輸入 API 金鑰。'; return; }
-    var dates = await listAvailableDates();
-    var pending = [];
-    for(var i=0;i<dates.length;i++){
-      var st = await dayFolderStatus(dates[i]);
-      if(st.hasChat && !st.hasNew) pending.push(dates[i]);
-    }
-    if(pending.length===0){ batchAiStatus.textContent = '目前沒有「待整理」的日期（要先在上方批次產生每日對話紀錄）。'; return; }
+
+    var pending = getCheckedDates();
+    if(pending.length === 0){ batchAiStatus.textContent = '沒有勾選任何日期，請先勾選要處理的日期。'; return; }
+
     if(!confirm('即將呼叫 AI 依序整理 ' + pending.length + ' 天，這會使用你的 API 額度。是否繼續？')) return;
+
     batchAiStopFlag = false;
     batchAiBtn.disabled = true;
     stopBatchAiBtn.disabled = false;
+
     var done=0, failList=[];
-    for(var j=0;j<pending.length;j++){
+
+    for(var j=0; j<pending.length; j++){
       if(batchAiStopFlag){ batchAiStatus.textContent = '已手動停止。完成 ' + done + ' / ' + pending.length + ' 天。'; break; }
+
       var date = pending[j];
       batchAiStatus.textContent = '（' + (j+1) + '/' + pending.length + '）處理 ' + date + '，呼叫 AI 中...';
+
       try{
         var day = await getDayFolder(date, false);
         var raw = await readFileIn(day, date+'對話紀錄.txt');
         var originalTxt = await readFileIn(day, date+'原記憶體.txt');
         var count = countEntriesInDayTxt(originalTxt) || 1;
-        var result = await callAiForDay(date, count, raw, function(msg){ batchAiStatus.textContent = '（' + (j+1) + '/' + pending.length + '）' + date + '：' + msg; });
+        var result = await callAiForDay(date, count, raw, function(msg){
+          batchAiStatus.textContent = '（' + (j+1) + '/' + pending.length + '）' + date + '：' + msg;
+        });
         if(result.indexOf('[1]')===-1){
           failList.push(date + '：AI 回覆格式不符，已略過（請手動檢查）');
         } else {
@@ -762,14 +938,21 @@
       }
       await renderProgress();
     }
+
     if(!batchAiStopFlag){
-      batchAiStatus.textContent = '全部完成！成功 ' + done + ' / ' + pending.length + ' 天。' + (failList.length ? ('　失敗：' + failList.join('；')) : '');
+      batchAiStatus.textContent = '全部完成！成功 ' + done + ' / ' + pending.length + ' 天。'
+        + (failList.length ? ('　失敗：' + failList.join('；')) : '');
     }
+
     batchAiBtn.disabled = false;
     stopBatchAiBtn.disabled = true;
   });
+
   stopBatchAiBtn.addEventListener('click', function(){ batchAiStopFlag = true; });
 
+  // ────────────────────────────────────────
+  // 初始化
+  // ────────────────────────────────────────
   (async function init(){
     var saved = await idbGetHandle();
     if(saved){
@@ -785,6 +968,7 @@
         } else {
           folderStatus.textContent = '先前選過資料夾「' + saved.name + '」，按下方「選擇聊天紀錄檔案並開始分割」時會自動跳出重新授權提示，或你也可以按上方「選擇記憶資料夾」重新選一次。';
           chatBtn.disabled = false;
+          await populateBatchList(); // 顯示「請先選擇資料夾」提示
         }
       }catch(e){}
     }
